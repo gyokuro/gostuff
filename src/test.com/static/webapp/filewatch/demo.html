@@ -1,0 +1,38 @@
+<html>
+<head>
+   <title>Filewatch WebSocket Demo</title>
+   <link rel="stylesheet" type="text/css" href="css/style.css"/>
+   <script type="text/JavaScript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+   <script type="text/JavaScript" src="script/filewatch.js">
+   </script>
+</head>
+<body>
+<div id="connect">
+   <div>Host: <input type="text" value="" name="host" id="host"/></div>
+   <div>Port: <input type="text" value="" name="port" id="port"/></div>
+   <div>Event Type: <input type="text" value="fsnotify" name="event" id="event"/> (regex)</div>
+   <div>Subscription: <input type="text" value=".*" name="subscription" id="subscription"/> (regex)</div>
+
+   <input type="button" value="Connect" id="connect-button" />
+   <input type="button" value="Disconnect" id="disconnect-button" />
+   <p/>
+   <!-- Commented out because html5 can't show absolute / full path for dropped directory
+   <div id="dropzone" style="width:300px;height:50px;background-color:lightblue">DROP DIRECTORY HERE TO WATCH</div>
+   <p/>
+   -->
+   <div>
+       <p/>
+       <div id="status">
+           Disconnected
+       </div>
+       <p/>
+       <div id="agent-info">
+	 agent info
+       </div>
+   </div>
+</div>
+<p/>
+<div id="console" style="width:800px;" >
+</div>
+</body>
+</html>

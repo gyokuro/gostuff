@@ -1,0 +1,23 @@
+# Emacs backup file
+*~
+*#
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# java
+*.class
+*.jar
+.DS_Store
+.DS_Store/*
