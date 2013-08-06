@@ -153,5 +153,4 @@ func runregex(p string, t *testing.T) {
 func TestRegexp(t *testing.T) {
 	runregex(".+\\.(js|css|html|png)$", t)
 	runregex(".+(\\.git).*", t)
-	runregex("^((?!git).)*$", t)
 }
