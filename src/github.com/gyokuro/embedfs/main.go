@@ -1,7 +1,7 @@
 package main
 
 import (
-	generator "embedfs/pkg/embedfs"
+	generator "github.com/gyokuro/embedfs/pkg/embedfs"
 	"flag"
 	"fmt"
 	"io/ioutil"
