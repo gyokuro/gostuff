@@ -1,9 +1,9 @@
 package main
 
 import (
-	generator "github.com/gyokuro/embedfs/pkg/embedfs"
 	"flag"
 	"fmt"
+	generator "github.com/gyokuro/embedfs/pkg/embedfs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -21,7 +21,8 @@ const (
 )
 
 var (
-	destDir        = flag.String("dest", ".", "Destination directory.")
+	destDir        = flag.String("destDir", ".", "Destination directory.")
+	createDestDir  = flag.Bool("createDestDir", true, "Creation destination directory if not exists.")
 	matchPattern   = flag.String("match", ".+\\.(js|css|html|png)$", "Regex to match target files.")
 	excludePattern = flag.String("exclude", ".+(\\.git).*", "Regex to exclude target files.")
 	byteSlice      = flag.Bool("byteSlice", true, "Represent binary data as byte slice.")
@@ -36,7 +37,33 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Current working directory: ", pwd)
+	log.Println("Current working directory: ", pwd)
+
+	d, err := os.Stat(*destDir)
+	if err != nil && *createDestDir {
+		err = os.MkdirAll(*destDir, 0777)
+		if err != nil {
+			fmt.Println("Cannot create destDir: ", *destDir)
+			panic(err)
+		}
+	} else if !d.IsDir() {
+		fmt.Println("destDir ", *destDir, " is not a directory.")
+		panic(err)
+	}
+
+	destDirAbs, err := filepath.Abs(*destDir)
+	if err != nil {
+		fmt.Println("Not valid directory -- Cannot derive absolute path from destDir: ", *destDir)
+		panic(err)
+	}
+
+	// Get the import root for the packages that will be generated.
+	importRoot, err := generator.CheckGoPath(destDirAbs)
+	if err != nil {
+		fmt.Println("destDir ", *destDir, " not reachable in $GOPATH")
+		panic(err)
+	}
+	log.Println("Import root: ", importRoot)
 
 	dir := "."
 	switch flag.NArg() {
@@ -135,8 +162,8 @@ func main() {
 	dirSeen := make(map[string]bool)
 	dirHierarchy := make(map[string][]string)
 	for directory, _ := range filesByDirectory {
-
 		p := directory
+		dirHierarchy[p] = []string{}
 		for {
 			parent := filepath.Dir(p)
 			child := filepath.Base(p)
@@ -158,8 +185,18 @@ func main() {
 	}
 
 	for directory, children := range dirHierarchy {
-		log.Println("Dir ", directory, ": generating toc with ", len(children), "sub-directories: ", children)
-		// TODO write the toc here:
+		toc := generator.NewDirToc(destDirAbs, importRoot, directory, children)
+		if *generate {
+			err = toc.Translate()
+			if err != nil {
+				panic(err)
+			}
+			if *gofmt && toc.Gofmt() != nil {
+				panic(err)
+			}
+		} else {
+			log.Printf("TOC: %s", toc)
+		}
 	}
 }
 

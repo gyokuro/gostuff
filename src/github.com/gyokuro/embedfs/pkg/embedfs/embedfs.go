@@ -3,6 +3,7 @@ package embedfs
 import (
 	"bytes"
 	"compress/zlib"
+	"errors"
 	"flag"
 	"fmt"
 	"go/parser"
@@ -13,6 +14,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -32,6 +34,97 @@ func NewTranslationUnit(packageName string, srcFile string, basename string, out
 		newLine:     true,
 		asByteSlice: byteSlice,
 	}
+}
+
+func NewDirToc(destDirAbs string, importRoot string, dirName string, subDirNames []string) *dirToc {
+	return &dirToc{
+		importRoot:  importRoot,
+		dirName:     dirName,
+		subDirNames: subDirNames,
+		outputPath:  filepath.Join(destDirAbs, dirName),
+	}
+}
+
+type dirToc struct {
+	importRoot  string
+	dirName     string   // not a path -  base form
+	subDirNames []string // children - base form, not full path
+	outputPath  string
+	gofile      string
+}
+
+func (d *dirToc) buildImports() map[string]string {
+	result := make(map[string]string)
+
+	for _, sub := range d.subDirNames {
+		result[sub] = filepath.Join(d.importRoot, d.dirName, sub)
+	}
+	return result
+}
+
+func (d *dirToc) Translate() error {
+	d.gofile = filepath.Join(d.outputPath, "generated-toc.go")
+	_, err := os.Stat(d.gofile)
+	if err == nil && !*overwrite {
+		// file exits and is *after* the mod time of source -- do nothing
+		log.Printf("Skipping %s", d.gofile)
+		return nil
+	}
+	var goFile *os.File
+	if err != nil {
+		goFile, err = os.Create(d.gofile)
+		if err != nil {
+			log.Printf("Warning: cannot create file %s", d.gofile)
+			return err
+		}
+	} else {
+		goFile, err = os.OpenFile(d.gofile, os.O_RDWR|os.O_TRUNC, 0660)
+		if err != nil {
+			log.Printf("Warning: cannot open file %s", d.gofile)
+			return err
+		}
+	}
+	defer goFile.Close()
+	err = d.writeDirToc(goFile)
+
+	if err == nil {
+		log.Printf("Generated toc --> %s\n", d.gofile)
+	} else {
+		log.Printf("FAIL to generate toc --> %s\n", d.gofile)
+	}
+	return nil
+}
+
+func (d *dirToc) Gofmt() error {
+	gofile, err := os.Open(d.gofile)
+	if err != nil {
+		log.Printf("Cannot open %s to run gofmt: %s\n", d.gofile, err)
+		return err
+	}
+	fileSet := token.NewFileSet()
+	ast, err := parser.ParseFile(fileSet, "", gofile, parser.ParseComments)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var formatted bytes.Buffer
+	config := &printer.Config{
+		Mode:     printer.TabIndent | printer.UseSpaces,
+		Tabwidth: 8,
+	}
+	err = config.Fprint(&formatted, fileSet, ast)
+	if err != nil {
+		log.Printf("Gofmt failed on %s: %s\n", d.gofile, err)
+		return err
+	}
+
+	if err := ioutil.WriteFile(d.gofile, formatted.Bytes(), 0644); err != nil {
+		log.Printf("Cannot write %s after gofmt: %s\n", d.gofile, err)
+		return err
+	}
+
+	log.Printf("Ran gofmt on %s\n", d.gofile)
+	return nil
 }
 
 type translationUnit struct {
@@ -197,4 +290,31 @@ func compressFile(fileName string) ([]byte, int64) {
 	}
 	out.Close()
 	return compressed.Bytes(), n
+}
+
+var matcher, _ = regexp.Compile("^(src|pkg)/")
+
+// Searches the GOPATH and checks if the given path (absolute path)
+// is relative to a component in the GOPATH.  If so, return the path
+// without the src or pkg so that the path is suitable for using as
+// import statements
+func CheckGoPath(path string) (string, error) {
+	pathenv := os.Getenv("GOPATH")
+	if pathenv == "" {
+		return "", errors.New("not found")
+	}
+	for _, dir := range strings.Split(pathenv, ":") {
+		if dir == "" {
+			// Unix shell semantics: path element "" means "."
+			dir = "."
+		}
+		if rel, err := filepath.Rel(dir, path); err == nil {
+			if matcher.MatchString(rel) {
+				return matcher.ReplaceAllString(rel, ""), err
+			} else {
+				return rel, err
+			}
+		}
+	}
+	return "", errors.New("not found")
 }

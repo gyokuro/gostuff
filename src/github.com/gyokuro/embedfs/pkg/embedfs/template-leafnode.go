@@ -30,7 +30,7 @@ func init() {
 }
 `
 
-type model struct {
+type leafModel struct {
 	PackageName      string
 	BaseName         string
 	Original         string
@@ -52,7 +52,7 @@ func (u *translationUnit) writeLeafNode(w io.Writer) error {
 	u.writer = buff
 	u.writeBinaryRepresentation()
 
-	return t.Execute(w, model{
+	return t.Execute(w, leafModel{
 		PackageName:      u.packageName,
 		BaseName:         u.baseName,
 		Original:         u.src,
