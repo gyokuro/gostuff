@@ -2,12 +2,10 @@
 ;;; The variables here are to be filled in by CMake.
 ;;;
 ;;;
-;;; //ATP/project.el
-
 ;;; load this with M-x 'load-file'
 
 ; Default working directory
-; (setq default-directory "/Users/david/github/atp/")
+; (setq default-directory ".")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Basic colors, etc.
@@ -33,11 +31,12 @@ that uses 'font-lock-warning-face'."
   `((,(format "^%s\\(.+\\)" (make-string width ?.))
      (1 font-lock-warning-face t))))
 
-(font-lock-add-keywords 'c-mode (font-lock-width-keyword 80))
-(font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
-(font-lock-add-keywords 'java-mode (font-lock-width-keyword 80))
-(font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
-(font-lock-add-keywords 'js-mode (font-lock-width-keyword 80))
+(font-lock-add-keywords 'go-mode (font-lock-width-keyword 120))
+(font-lock-add-keywords 'c-mode (font-lock-width-keyword 120))
+(font-lock-add-keywords 'c++-mode (font-lock-width-keyword 120))
+(font-lock-add-keywords 'java-mode (font-lock-width-keyword 120))
+(font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
+(font-lock-add-keywords 'js-mode (font-lock-width-keyword 120))
 (custom-set-faces
    '(my-tab-face            ((((class color)) (:foreground "blue" :underline t))) t)
    '(my-trailing-space-face ((((class color)) (:background "red"))) t)
@@ -119,3 +118,16 @@ it blindly to other people's files can cause enormously messy diffs!"
   (local-set-key "\C-cp" 'compilation-previous-error)
 )
 (add-hook 'compilation-mode-hook 'my-compile-hook)
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Useful for refreshing buffers after git pull
+(defun revert-all-buffers ()
+    "Refreshes all open buffers from their respective files."
+    (interactive)
+    (dolist (buf (buffer-list))
+      (with-current-buffer buf
+        (when (and (buffer-file-name) (not (buffer-modified-p)))
+          (revert-buffer t t t) )))
+    (message "Refreshed open files.") )
