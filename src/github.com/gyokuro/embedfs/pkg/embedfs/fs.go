@@ -1,20 +1,8 @@
 package embedfs
 
 import (
-	"io"
-	"path/filepath"
-	"strings"
-	"text/template"
-)
-
-const dirTemplate = `
-// AUTO-GENERATED TOC
-// DO NOT EDIT!!!
-package {{.PackageName}}
-
-import (
-        "bytes"
-        "compress/zlib"
+	"bytes"
+	"compress/zlib"
 	"errors"
 	"io"
 	"net/http"
@@ -25,44 +13,8 @@ import (
 	"time"
 )
 
-import (
-	_ "log"
-)
-
-{{if len .Imports }}
-import (
-        {{range $alias, $import := .Imports}}
-        {{$alias}} "{{$import}}"
-        {{end}}
-)
-{{end}}
-// generated
-
-func init() {
-
-	thisDir.files["."] = &_file{
-		name:   ".",
-		isDir:  true,
-		dir:    Dir,
-		opener: Open,
-	}
-
-
-       {{if len .Imports }}
-        {{range $alias, $import := .Imports}}
-	thisDir.files["{{$alias}}"] = &_file{
-		name:    "{{$alias}}",
-		isDir:   true,
-		dir:     {{$alias}}.Dir,
-		opener:  {{$alias}}.Open,
-		readdir: {{$alias}}.Readdir,
-	}
-        {{end}}
-       {{end}}
-}
-
 /////////////////////////////////////
-var DIR_NAME = "{{.DirName}}"
+var DIR_NAME = "root"
 
 var thisDir _filesystem = _filesystem{
 	files: make(map[string]*_file),
@@ -274,23 +226,4 @@ func (h *_handle) Seek(offset int64, whence int) (int64, error) {
 		h.offset = 0
 	}
 	return h.offset, nil
-}
-`
-
-type tocModel struct {
-	DirName     string
-	PackageName string
-	Imports     map[string]string // map[alias]import
-}
-
-func (d *dirToc) writeDirToc(w io.Writer) error {
-	t, err := template.New("dir-toc").Parse(dirTemplate)
-	if err != nil {
-		panic(err)
-	}
-	return t.Execute(w, tocModel{
-		DirName:     d.dirName,
-		PackageName: strings.Replace(d.dirName, string(filepath.Separator), "_", -1),
-		Imports:     d.buildImports(),
-	})
 }

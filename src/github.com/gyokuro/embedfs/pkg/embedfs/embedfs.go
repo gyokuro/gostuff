@@ -18,6 +18,9 @@ import (
 	"strings"
 )
 
+// pull this in for compilation
+var _ *_file = (*_file)(nil)
+
 var (
 	maxUncompressedSize = flag.Int64("maxUncompressedK", 5, "Max in kilobytes uncompressed.")
 	minCompressionRatio = flag.Float64("minCompressionRatio", 0.5, "Min compression ratio.")
