@@ -27,9 +27,25 @@ var (
 	overwrite           = flag.Bool("overwrite", true, "Overwrite existing generated source.")
 )
 
+func Sanitize2(n string) (value string) {
+	value = strings.Replace(n, ".", "_", -1)
+	value = strings.Replace(value, "-", "_", -1)
+	return
+}
+
+func Sanitize(n string) (value string) {
+	value = strings.Replace(n, string(os.PathSeparator), "_", -1)
+	value = strings.Replace(value, ".", "_", -1)
+	value = strings.Replace(value, "-", "_", -1)
+	return
+}
+
 func NewTranslationUnit(packageName string, srcFile string, basename string, outDir string, byteSlice bool) *translationUnit {
+	name := strings.Replace(basename, ".", "_", -1)
+	name = strings.Replace(name, "-", "_", -1)
+
 	return &translationUnit{
-		name:        strings.Replace(basename, ".", "_", -1),
+		name:        name,
 		baseName:    basename,
 		src:         srcFile,
 		gofile:      filepath.Join(outDir, basename+".go"),
@@ -60,7 +76,7 @@ func (d *dirToc) buildImports() map[string]string {
 	result := make(map[string]string)
 
 	for _, sub := range d.subDirNames {
-		result[sub] = filepath.Join(d.importRoot, d.dirName, sub)
+		result[Sanitize2(sub)] = filepath.Join(d.importRoot, d.dirName, sub)
 	}
 	return result
 }

@@ -2,8 +2,6 @@ package embedfs
 
 import (
 	"io"
-	"path/filepath"
-	"strings"
 	"text/template"
 )
 
@@ -385,9 +383,10 @@ func (d *dirToc) writeDirToc(w io.Writer) error {
 	if err != nil {
 		panic(err)
 	}
+
 	return t.Execute(w, tocModel{
 		DirName:     d.dirName,
-		PackageName: strings.Replace(d.dirName, string(filepath.Separator), "_", -1),
+		PackageName: Sanitize(d.dirName),
 		Imports:     d.buildImports(),
 	})
 }

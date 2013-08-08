@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 )
 
 var (
@@ -120,6 +119,8 @@ func main() {
 			} else {
 				filesByDirectory[dir] = []string{base}
 			}
+		} else {
+			log.Println("Skipping", file)
 		}
 	}
 
@@ -131,8 +132,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Cannot create directory %s: %s", outDir, err)
 		}
-		packageName := strings.Replace(dir, string(os.PathSeparator), "_", -1)
-		packageName = strings.Replace(packageName, ".", "_", -1)
+		packageName := generator.Sanitize(dir)
 		for _, file := range files {
 			srcFile := filepath.Join(dir, file)
 			u := generator.NewTranslationUnit(packageName, srcFile, file, outDir, *byteSlice)
