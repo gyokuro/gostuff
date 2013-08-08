@@ -13,13 +13,6 @@ import (
 	"strings"
 )
 
-const (
-	maxUncompressed = 50 << 10 // 50KB
-	// Threshold ratio for compression.
-	// Files which don't compress at least as well are kept uncompressed.
-	zRatio = 0.5
-)
-
 var (
 	destDir        = flag.String("destDir", ".", "Destination directory.")
 	createDestDir  = flag.Bool("createDestDir", true, "Creation destination directory if not exists.")
@@ -162,8 +155,11 @@ func main() {
 	dirSeen := make(map[string]bool)
 	dirHierarchy := make(map[string][]string)
 	for directory, _ := range filesByDirectory {
+
 		p := directory
-		dirHierarchy[p] = []string{}
+		if _, exists := dirHierarchy[p]; !exists {
+			dirHierarchy[p] = []string{}
+		}
 		for {
 			parent := filepath.Dir(p)
 			child := filepath.Base(p)
@@ -173,8 +169,8 @@ func main() {
 			}
 
 			if _, seen := dirSeen[p]; !seen {
-				if _, exists := dirHierarchy[parent]; exists {
-					dirHierarchy[parent] = append(dirHierarchy[parent], child)
+				if list, exists := dirHierarchy[parent]; exists {
+					dirHierarchy[parent] = append(list, child)
 				} else {
 					dirHierarchy[parent] = []string{child}
 				}
