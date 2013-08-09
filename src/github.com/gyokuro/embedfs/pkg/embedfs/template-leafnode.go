@@ -14,9 +14,11 @@ package {{.PackageName}}
 
 import (
 	"time"
+        embedfs "{{.ImportRoot}}"
 )
 
-var {{.VarName}} = _file{
+
+var {{.VarName}} = embedfs.EmbedFile{
 	name:       "{{.BaseName}}",
 	original:   "{{.Original}}",
 	compressed: {{.IsCompressed}},
@@ -26,11 +28,12 @@ var {{.VarName}} = _file{
 }
 
 func init() {
-	register("{{.BaseName}}", &{{.VarName}})
+	embedfs.Register("{{.BaseName}}", &{{.VarName}})
 }
 `
 
 type leafModel struct {
+	ImportRoot       string
 	PackageName      string
 	BaseName         string
 	Original         string
@@ -53,6 +56,7 @@ func (u *translationUnit) writeLeafNode(w io.Writer) error {
 	u.writeBinaryRepresentation()
 
 	return t.Execute(w, leafModel{
+		ImportRoot:       u.importRoot,
 		PackageName:      u.packageName,
 		BaseName:         u.baseName,
 		Original:         u.src,

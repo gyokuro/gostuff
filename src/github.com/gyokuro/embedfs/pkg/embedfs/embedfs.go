@@ -19,7 +19,7 @@ import (
 )
 
 // pull this in for compilation
-var _ *_file = (*_file)(nil)
+var _ *EmbedFile = (*EmbedFile)(nil)
 
 var (
 	maxUncompressedSize = flag.Int64("maxUncompressedK", 5, "Max in kilobytes uncompressed.")
@@ -40,11 +40,12 @@ func Sanitize(n string) (value string) {
 	return
 }
 
-func NewTranslationUnit(packageName string, srcFile string, basename string, outDir string, byteSlice bool) *translationUnit {
+func NewTranslationUnit(importRoot string, packageName string, srcFile string, basename string, outDir string, byteSlice bool) *translationUnit {
 	name := strings.Replace(basename, ".", "_", -1)
 	name = strings.Replace(name, "-", "_", -1)
 
 	return &translationUnit{
+		importRoot:  importRoot,
 		name:        name,
 		baseName:    basename,
 		src:         srcFile,
@@ -147,6 +148,7 @@ func (d *dirToc) Gofmt() error {
 }
 
 type translationUnit struct {
+	importRoot  string
 	name        string
 	baseName    string
 	src         string

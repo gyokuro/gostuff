@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	generator "github.com/gyokuro/embedfs/pkg/embedfs"
+	//	embedfs "github.com/gyokuro/embedfs/resources/embedfs"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -132,10 +135,11 @@ func main() {
 		if err != nil {
 			log.Fatalf("Cannot create directory %s: %s", outDir, err)
 		}
+
 		packageName := generator.Sanitize(dir)
 		for _, file := range files {
 			srcFile := filepath.Join(dir, file)
-			u := generator.NewTranslationUnit(packageName, srcFile, file, outDir, *byteSlice)
+			u := generator.NewTranslationUnit(importRoot, packageName, srcFile, file, outDir, *byteSlice)
 			if *generate {
 				err = u.Translate()
 				if err != nil {
@@ -194,6 +198,31 @@ func main() {
 			log.Printf("TOC: %s", toc)
 		}
 	}
+
+	// generate the fs interface implementation
+
+	fs_template, err := embedfs.Mount().Open("fs.go")
+	log.Println("Using template: ", fs_template, err)
+	if err != nil {
+		panic(err)
+	}
+
+	fsPackageName := filepath.Base(*destDir)
+	fsOutPath := filepath.Join(*destDir, "generated-fs.go")
+	log.Println("FS package", fsPackageName, fsOutPath)
+
+	buff := bytes.NewBufferString("")
+	buff.WriteString("package " + fsPackageName + "\n//")
+	io.Copy(buff, fs_template)
+
+	if *generate {
+		err = ioutil.WriteFile(fsOutPath, buff.Bytes(), 0644)
+		if err != nil {
+			panic(err)
+		}
+		log.Println("Generated fs.go in ", fsOutPath)
+	}
+
 }
 
 func concat(a []string, b []string) []string {

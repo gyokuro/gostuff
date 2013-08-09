@@ -15,34 +15,50 @@ import (
 
 /// ** Filesystem implementation
 
-var __thisDir = _dir{
-	name:    ".",
-	modTime: time.Now(),
-	files:   make(map[string]*_file),
+// var __thisDir = EmbedDir{
+// 	name:    ".",
+// 	modTime: time.Now(),
+// 	files:   make(map[string]*EmbedFile),
+// }
+
+func Register(dir *EmbedDir, basename string, ptr *EmbedFile) {
+	dir.sync.Lock()
+	dir.files[basename] = ptr
+	dir.sync.Unlock()
 }
 
-func register(basename string, ptr *_file) {
-	__thisDir.sync.Lock()
-	__thisDir.files[basename] = ptr
-	__thisDir.sync.Unlock()
+// func Mount() *_dirHandle {
+// 	return Dir(".")
+// }
+
+func Mount(dir *EmbedDir) http.FileSystem {
+	return Dir(".", dir)
 }
 
-func Mount() *_dirHandle {
-	return Dir(".")
+// func FileInfo() os.FileInfo {
+// 	return &__thisDir
+// }
+
+func FileInfo(dir *EmbedDir) os.FileInfo {
+	return dir
 }
 
-func FileInfo() os.FileInfo {
-	return &__thisDir
+func Readdir(count int, dir *EmbedDir) ([]os.FileInfo, error) {
+	return Dir(".", dir).Readdir(count)
 }
 
-func Dir(path string) *_dirHandle {
+// func Readdir(count int) ([]os.FileInfo, error) {
+// 	return Mount().Readdir(count)
+// }
+
+func Dir(path string, dir *EmbedDir) http.FileSystem {
 	if path == "." {
 		files := make([]os.FileInfo, 0)
-		for _, file := range __thisDir.files {
+		for _, file := range dir.files {
 			files = append(files, file)
 		}
 		return &_dirHandle{
-			static: &__thisDir,
+			static: dir,
 			files:  files,
 		}
 	}
@@ -52,24 +68,51 @@ func Dir(path string) *_dirHandle {
 		path, _ = filepath.Rel("/", path) // make it relative
 	}
 	subdir := strings.Split(path, string(filepath.Separator))[0]
-	if d, exists := __thisDir.files[subdir]; exists {
+	if d, exists := dir.files[subdir]; exists {
 		return &_dirHandle{
 			info:    d.info,
 			opener:  d.opener,
 			readdir: d.readdir,
 		}
 	}
-
 	return &_dirHandle{}
 }
 
-func Open(path string) (http.File, error) {
-	return Mount().Open(path)
+// func Dir(path string) *_dirHandle {
+// 	if path == "." {
+// 		files := make([]os.FileInfo, 0)
+// 		for _, file := range __thisDir.files {
+// 			files = append(files, file)
+// 		}
+// 		return &_dirHandle{
+// 			static: &__thisDir,
+// 			files:  files,
+// 		}
+// 	}
+
+// 	// search for subdirectories
+// 	if filepath.IsAbs(path) {
+// 		path, _ = filepath.Rel("/", path) // make it relative
+// 	}
+// 	subdir := strings.Split(path, string(filepath.Separator))[0]
+// 	if d, exists := __thisDir.files[subdir]; exists {
+// 		return &_dirHandle{
+// 			info:    d.info,
+// 			opener:  d.opener,
+// 			readdir: d.readdir,
+// 		}
+// 	}
+
+// 	return &_dirHandle{}
+// }
+
+func Open(path string, dir *EmbedDir) (http.File, error) {
+	return Mount(dir).Open(path)
 }
 
-func Readdir(count int) ([]os.FileInfo, error) {
-	return Mount().Readdir(count)
-}
+// func Open(path string) (http.File, error) {
+// 	return Mount().Open(path)
+// }
 
 // http.FileSystem
 // type FileSystem interface {
@@ -98,40 +141,40 @@ func Readdir(count int) ([]os.FileInfo, error) {
 // Ensures proper implementation of interfaces
 var _ http.FileSystem = (*_dirHandle)(nil)
 var _ http.File = (*_fileHandle)(nil)
-var _ os.FileInfo = (*_dir)(nil)
-var _ os.FileInfo = (*_file)(nil)
+var _ os.FileInfo = (*EmbedDir)(nil)
+var _ os.FileInfo = (*EmbedFile)(nil)
 
 ////////////////////////////////////////////////////////////////////////
 // DIRECTORY
 
-type _dir struct {
+type EmbedDir struct {
 	name    string
 	modTime time.Time
-	files   map[string]*_file
+	files   map[string]*EmbedFile
 	sync    sync.Mutex
 }
 
-func (d *_dir) Name() string {
+func (d *EmbedDir) Name() string {
 	return d.name
 }
-func (d *_dir) Size() int64 {
+func (d *EmbedDir) Size() int64 {
 	return 0
 }
-func (d *_dir) Mode() os.FileMode {
+func (d *EmbedDir) Mode() os.FileMode {
 	return 0444 | os.ModeDir
 }
-func (d *_dir) ModTime() time.Time {
+func (d *EmbedDir) ModTime() time.Time {
 	return d.modTime
 }
-func (d *_dir) IsDir() bool {
+func (d *EmbedDir) IsDir() bool {
 	return true
 }
-func (d *_dir) Sys() interface{} {
+func (d *EmbedDir) Sys() interface{} {
 	return nil
 }
 
 type _dirHandle struct {
-	static *_dir
+	static *EmbedDir
 	offset int
 	files  []os.FileInfo // for implementing Readdir
 
@@ -156,14 +199,22 @@ func (d *_dirHandle) Open(name string) (http.File, error) {
 
 			if ptr.name == "." {
 				files := make([]os.FileInfo, 0)
-				for _, file := range __thisDir.files {
+				for _, file := range d.static.files {
 					files = append(files, file)
 				}
 				return &_dirHandle{
-					static: &__thisDir,
+					static: d.static,
 					files:  files,
 					info:   FileInfo,
 				}, nil
+				// for _, file := range __thisDir.files {
+				// 	files = append(files, file)
+				// }
+				// return &_dirHandle{
+				// 	static: &__thisDir,
+				// 	files:  files,
+				// 	info:   FileInfo,
+				// }, nil
 			} else {
 				if p, err := filepath.Rel(ptr.name, name); err == nil {
 					return ptr.opener(p)
@@ -237,7 +288,7 @@ func (d *_dirHandle) Stat() (os.FileInfo, error) {
 ////////////////////////////////////////////////////////////////////////
 // REGULAR FILE
 
-type _file struct {
+type EmbedFile struct {
 	name       string
 	original   string
 	compressed bool
@@ -251,33 +302,33 @@ type _file struct {
 }
 
 type _fileHandle struct {
-	file     *_file
+	file     *EmbedFile
 	offset   int64
 	open     bool
 	inflater io.ReadCloser
 }
 
-func (f *_file) Name() string {
+func (f *EmbedFile) Name() string {
 	return f.name
 }
 
-func (f *_file) Size() int64 {
+func (f *EmbedFile) Size() int64 {
 	return f.size
 }
 
-func (f *_file) Mode() os.FileMode {
+func (f *EmbedFile) Mode() os.FileMode {
 	return 0444
 }
 
-func (f *_file) ModTime() time.Time {
+func (f *EmbedFile) ModTime() time.Time {
 	return f.modTime
 }
 
-func (f *_file) IsDir() bool {
+func (f *EmbedFile) IsDir() bool {
 	return false
 }
 
-func (f *_file) Sys() interface{} {
+func (f *EmbedFile) Sys() interface{} {
 	return nil
 }
 
