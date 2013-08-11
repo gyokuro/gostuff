@@ -34,4 +34,4 @@ Then run the resulting executable, `bootstrap-examples-master`:
 
     ./bootstrap-examples-master
 
-and open the browser at [ http://localhost:7777 ]
+and open the browser at [[ http://localhost:7777 ]]
