@@ -17,18 +17,17 @@ import (
         embedfs "{{.ImportRoot}}"
 )
 
-
 var {{.VarName}} = embedfs.EmbedFile{
-	name:       "{{.BaseName}}",
-	original:   "{{.Original}}",
-	compressed: {{.IsCompressed}},
-	modTime:    time.Unix({{.ModTimeUnix}},{{.ModTimeUnixNano}}),
-        size:       {{.SizeUncompressed}},
-	data:       {{.ContentAsString}},
+	FileName:       "{{.BaseName}}",
+	Original:   "{{.Original}}",
+	Compressed: {{.IsCompressed}},
+	ModificationTime: time.Unix({{.ModTimeUnix}},{{.ModTimeUnixNano}}),
+        OriginalSize:     {{.SizeUncompressed}},
+	Data:       {{.ContentAsString}},
 }
 
 func init() {
-	embedfs.Register("{{.BaseName}}", &{{.VarName}})
+	DIR.AddFile(&{{.VarName}})
 }
 `
 

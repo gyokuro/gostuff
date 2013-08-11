@@ -9,7 +9,7 @@ import (
 )
 
 import (
-	bootstrap_examples "github.com/gyokuro/embedfs/bootstrap-examples-master"
+	bootstrap_examples "github.com/gyokuro/embedfs/examples/bootstrap-examples-master"
 )
 
 // FLAGS

@@ -1,18 +1,21 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	generator "github.com/gyokuro/embedfs/pkg/embedfs"
-	//	embedfs "github.com/gyokuro/embedfs/resources/embedfs"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+)
+
+import (
+	"bytes"
+	resources "github.com/gyokuro/embedfs/resources/embedfs"
+	"io"
 )
 
 var (
@@ -200,19 +203,14 @@ func main() {
 	}
 
 	// generate the fs interface implementation
-
-	fs_template, err := embedfs.Mount().Open("fs.go")
+	fs_template, err := resources.Mount().Open("fs.go")
 	log.Println("Using template: ", fs_template, err)
 	if err != nil {
 		panic(err)
 	}
 
-	fsPackageName := filepath.Base(*destDir)
 	fsOutPath := filepath.Join(*destDir, "generated-fs.go")
-	log.Println("FS package", fsPackageName, fsOutPath)
-
 	buff := bytes.NewBufferString("")
-	buff.WriteString("package " + fsPackageName + "\n//")
 	io.Copy(buff, fs_template)
 
 	if *generate {

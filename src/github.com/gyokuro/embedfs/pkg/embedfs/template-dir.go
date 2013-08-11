@@ -2,6 +2,7 @@ package embedfs
 
 import (
 	"io"
+	"path/filepath"
 	"text/template"
 )
 
@@ -11,26 +12,13 @@ const dirTemplate = `
 package {{.PackageName}}
 
 import (
-        "bytes"
-        "compress/zlib"
-	"errors"
-	"io"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
-)
-
-import (
-	"log"
+        embedfs "{{.ImportRoot}}"
 )
 
 {{if len .Imports }}
 import (
-
-        embedfs "{{.ImportRoot}}"
 
         {{range $alias, $import := .Imports}}
         {{$alias}} "{{$import}}"
@@ -40,59 +28,38 @@ import (
 
 func init() {
 
-	register(".", &_file{
-		name:    ".",
-		info:    FileInfo,
-		opener:  Open,
-		readdir: Readdir,
-	})
+	DIR.AddDir(DIR)
 
-       {{if len .Imports }}
-        {{range $alias, $import := .Imports}}
-	register("{{$alias}}",  &_file{
-		name:    "{{$alias}}",
-		info:    {{$alias}}.FileInfo,
-		opener:  {{$alias}}.Open,
-		readdir: {{$alias}}.Readdir,
-	})
+        {{if len .Imports }}
+          {{range $alias, $import := .Imports}}
+          DIR.AddDir({{$alias}}.DIR)
+          {{end}}
         {{end}}
-       {{end}}
+
 }
 
-var _ = log.Flags()
+var DIR = embedfs.DirAlloc("{{$.DirBaseName}}")
 
-/// ** Filesystem implementation
-
-var __thisDir = embedfs.EmbedDir{
-	name:    ".",
-	modTime: time.Now(),
-	files:   make(map[string]*_file),
+func Dir(path string) http.FileSystem {
+	if handle, err := DIR.Open(); err == nil {
+		return handle
+	}
+	return nil
 }
 
 func Mount() http.FileSystem {
-	return embedfs.Mount(&__thisDir)
+	return Dir(".")
 }
 
 func FileInfo() os.FileInfo {
-	return &__thisDir
-}
-
-func Dir(path string) http.FileSystem {
-        return embedfs.Dir(path, &__thisDir)
-}
-
-func Open(path string) (http.File, error) {
-	return Mount().Open(path)
-}
-
-func Readdir(count int) ([]os.FileInfo, error) {
-	return Mount().Readdir(count)
+	return DIR
 }
 `
 
 type tocModel struct {
 	ImportRoot  string
 	DirName     string
+	DirBaseName string
 	PackageName string
 	Imports     map[string]string // map[alias]import
 }
@@ -106,6 +73,7 @@ func (d *dirToc) writeDirToc(w io.Writer) error {
 	return t.Execute(w, tocModel{
 		ImportRoot:  d.importRoot,
 		DirName:     d.dirName,
+		DirBaseName: filepath.Base(d.dirName),
 		PackageName: Sanitize(d.dirName),
 		Imports:     d.buildImports(),
 	})
