@@ -84,7 +84,9 @@ func (d *_dir) Sys() interface{} {
 func (d *_dir) Open() (*_dirHandle, error) {
 	files := make([]os.FileInfo, 0)
 	for _, dir := range d.dirs {
-		files = append(files, dir)
+		if dir.name != d.name {
+			files = append(files, dir)
+		}
 	}
 	for _, file := range d.files {
 		files = append(files, file)
@@ -114,6 +116,10 @@ type _dirHandle struct {
 }
 
 func (d *_dirHandle) Open(name string) (handle http.File, err error) {
+	if name == "." {
+		return d, nil
+	}
+
 	name = filepath.Clean(name)
 	if filepath.IsAbs(name) {
 		name, err = filepath.Rel("/", name)
@@ -121,18 +127,18 @@ func (d *_dirHandle) Open(name string) (handle http.File, err error) {
 			return
 		}
 	}
-	// subdirectory
-	subDir := strings.Split(filepath.Dir(name), string(filepath.Separator))[0]
-	if dir, exists := d.stat.dirs[subDir]; exists {
+
+	next := strings.Split(name, string(filepath.Separator))[0]
+
+	if dir, exists := d.stat.dirs[next]; exists {
 		if dirHandle, err := dir.Open(); err == nil {
-			if p, err := filepath.Rel(dir.name, name); err == nil {
-				handle, err = dirHandle.Open(p)
+			if p, err := filepath.Rel(next, name); err == nil {
+				return dirHandle.Open(p)
 			}
 		}
 		return
 	}
-	// file
-	if file, exists := d.stat.files[name]; exists {
+	if file, exists := d.stat.files[next]; exists {
 		h := &fileHandle{
 			stat: file,
 			open: true,
@@ -143,6 +149,7 @@ func (d *_dirHandle) Open(name string) (handle http.File, err error) {
 		handle = h
 		return
 	}
+
 	err = errors.New("not found: " + name)
 	return
 }

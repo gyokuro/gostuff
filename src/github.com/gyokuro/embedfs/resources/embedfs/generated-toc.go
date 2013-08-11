@@ -3,9 +3,9 @@
 package embedfs
 
 import (
-	embedfs "github.com/gyokuro/embedfs/resources"
 	"net/http"
 	"os"
+	embedfs "github.com/gyokuro/embedfs/resources"
 )
 
 func init() {

@@ -1,15 +1,16 @@
 
-Command to run:
+Building
 
-    go run main.go -destDir=. -generate=true static
+The embedfs command (`main.go`) itself depends on one of the source files (`pkg/embedfs/fs.go`) to be
+packaged within the binary -- so that it can generate the filesystem api implementations.
 
-This will generate .go files in the directory `static` which also has the resource files.
-To run the example which embeds the resources in the `static` directory:
+The embedded filesystem that the program depends on is in the `resources` directory.
+To embed the fs.go source code itself in the executable:
 
-    go run example.go
-
-Embed the fs.go source code itself in the executable:
-
+    cd pkg
     go run ../main.go -destDir=../resources -match="/fs\\.go$" -generate=true .
 
-This is run from the pkg/ directory so that package names will not include pkg_
+This will generate the go files to be compiled.  Then,
+
+    cd .. # back to where main.go is
+    go build -o embedfs main.go
